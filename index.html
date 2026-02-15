@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Театральный листок: А.П. Чехов и союз КАК</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Marck+Script&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, collection, getDocs, query, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        // Экспорт в глобальную область для доступа из других модулей или скриптов
+        window.db = db;
+        window.appId = appId;
+        window.auth = auth;
+        window.firestoreUtils = { collection, getDocs, query, setDoc, doc, serverTimestamp };
+
+        // Инициализация авторизации перед запросами (Правило 3)
+        const initAuth = async () => {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+        };
+        initAuth().catch(console.error);
+    </script>
+
+    <style>
+        :root {
+            --vintage-paper: #f4eee1;
+            --theatre-red: #800000;
+            --gold: #c5a059;
+            --ink: #2c2c2c;
+        }
+
+        body {
+            background-color: #1a1a1a;
+            font-family: 'Old Standard TT', serif;
+            color: var(--ink);
+            overflow-x: hidden;
+        }
+
+        .parallax-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: url('https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?auto=format&fit=crop&q=80&w=2000');
+            background-attachment: fixed;
+            background-position: bottom center;
+            background-size: cover;
+            opacity: 0.15;
+            z-index: -1;
+        }
+
+        .paper-texture {
+            background-color: var(--vintage-paper);
+            background-image: url('https://www.transparenttextures.com/patterns/parchment.png');
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }
+
+        .theatre-frame {
+            border: 10px double var(--gold);
+            padding: 2rem;
+            position: relative;
+        }
+
+        .cursive { font-family: 'Marck Script', cursive; }
+        .title-gold { color: var(--theatre-red); text-shadow: 1px 1px 0px var(--gold); }
+
+        input[type="text"], input[type="password"], textarea {
+            background: transparent;
+            border-bottom: 1px dashed var(--theatre-red);
+            outline: none;
+            color: var(--theatre-red);
+            font-weight: bold;
+        }
+
+        .comma-input { width: 30px; text-align: center; border-radius: 4px; transition: 0.3s; }
+        .correct { background-color: #dcfce7 !important; border-color: #22c55e !important; }
+        .incorrect { background-color: #fee2e2 !important; border-color: #ef4444 !important; }
+
+        .btn-theatre {
+            background: var(--theatre-red);
+            color: var(--gold);
+            border: 1px solid var(--gold);
+            padding: 0.6rem 1.5rem;
+            font-family: 'Playfair Display', serif;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .btn-theatre:hover { background: var(--gold); color: var(--theatre-red); }
+
+        .theory-block {
+            border: 2px solid var(--gold);
+            background: rgba(197, 160, 89, 0.1);
+            position: relative;
+            padding: 2rem;
+            margin: 3rem 0;
+        }
+
+        .theory-block::after {
+            content: 'АНТРАКТЪ: ТЕОРИЯ';
+            position: absolute;
+            top: -15px; left: 50%;
+            transform: translateX(-50%);
+            background: var(--gold);
+            color: white;
+            padding: 2px 20px;
+            font-weight: bold;
+            font-size: 0.8rem;
+        }
+
+        .matching-item {
+            cursor: pointer;
+            border: 1px solid var(--gold);
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(255,255,255,0.5);
+        }
+
+        .matching-item.selected { background: var(--theatre-red); color: var(--gold); }
+
+        .hidden { display: none !important; }
+
+        .theatre-footer {
+            height: 300px;
+            background-image: linear-gradient(to top, #1a1a1a, transparent), url('https://images.unsplash.com/photo-1503095396549-8070f9017609?auto=format&fit=crop&q=80&w=1500');
+            background-size: cover;
+            background-position: bottom;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .shake { animation: shake 0.2s ease-in-out 0s 2; }
+
+        .modal-overlay {
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(5px);
+        }
+    </style>
+</head>
+<body class="py-12 px-4">
+    <div class="parallax-bg"></div>
+
+    <!-- ЭКРАН ВХОДА УЧЕНИКА -->
+    <div id="login-screen" class="fixed inset-0 z-[200] flex items-center justify-center p-4 modal-overlay">
+        <div class="max-w-md w-full paper-texture theatre-frame text-center p-8">
+            <h2 class="text-3xl font-bold title-gold mb-6 uppercase">Театральная Касса</h2>
+            <p class="italic mb-8">Представьтесь для получения входного билета</p>
+            <div class="space-y-6">
+                <div>
+                    <label class="block text-xs uppercase mb-1 text-gray-500">Фамилия</label>
+                    <input type="text" id="user-lastname" class="w-full text-center text-xl p-2 border-b-2" required>
+                </div>
+                <div>
+                    <label class="block text-xs uppercase mb-1 text-gray-500">Имя</label>
+                    <input type="text" id="user-firstname" class="w-full text-center text-xl p-2 border-b-2" required>
+                </div>
+                <div>
+                    <label class="block text-xs uppercase mb-1 text-gray-500">Класс</label>
+                    <input type="text" id="user-grade" class="w-full text-center text-xl p-2 border-b-2" required>
+                </div>
+                <button onclick="startLesson()" class="btn-theatre w-full mt-4 text-xl py-4">Получить билет</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- МОДАЛЬНОЕ ОКНО ПАРОЛЯ УЧИТЕЛЯ -->
+    <div id="teacher-auth-modal" class="fixed inset-0 z-[400] flex items-center justify-center p-4 modal-overlay hidden">
+        <div class="max-w-sm w-full paper-texture theatre-frame text-center p-8 border-4">
+            <h2 class="text-2xl font-bold title-gold mb-4 uppercase">Доступъ в Архивъ</h2>
+            <p class="text-sm italic mb-6">Введите секретный шифр администрации</p>
+            <input type="password" id="teacher-password-input" class="w-full text-center text-2xl p-2 border-b-2 mb-6" placeholder="****">
+            <div class="flex gap-2">
+                <button onclick="closeTeacherAuth()" class="btn-theatre bg-gray-500 border-gray-500 flex-1">Отмена</button>
+                <button onclick="verifyTeacherPassword()" class="btn-theatre flex-1">Войти</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ОСНОВНОЙ КОНТЕНТ -->
+    <div id="main-content" class="max-w-4xl mx-auto paper-texture theatre-frame mb-20 hidden">
+        
+        <header class="text-center mb-12 border-b-4 border-double border-red-900 pb-8">
+            <h2 class="text-xl italic mb-2 tracking-[0.2em] uppercase">Императорские театры представляютъ</h2>
+            <h1 class="text-5xl md:text-7xl font-bold title-gold mb-4 uppercase">Театральный Листокъ</h1>
+            <p class="text-2xl cursive mb-6">Знаки препинания при союзе «КАК»</p>
+            <div class="flex justify-between items-center italic text-sm">
+                <div id="display-name" class="border-b border-black px-4 font-bold">Зритель: ...</div>
+                <div class="text-red-900 text-3xl">🎦</div>
+                <div id="display-grade" class="border-b border-black px-4 font-bold">Класс: ...</div>
+            </div>
+        </header>
+
+        <!-- Пролог -->
+        <section class="mb-16 grid md:grid-cols-3 gap-8 items-center">
+            <div class="md:col-span-2">
+                <h3 class="text-2xl font-bold text-red-900 mb-4 border-b border-gold inline-block uppercase">📜 ПРОЛОГЪ</h3>
+                <p class="text-xl leading-relaxed italic">
+                    Театр Чехова — это искусство подтекста. В его пьесах слова значат больше, чем кажется на первый взгляд. 
+                    Союз «как» тоже играет разные роли. Расставьте знаки препинания в первом действии.
+                </p>
+            </div>
+            <div class="relative">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Anton_Chekhov_1889.jpg/419px-Anton_Chekhov_1889.jpg" class="filter sepia border-2 border-white shadow-lg w-full rounded" alt="Чехов 1889">
+            </div>
+        </section>
+
+        <!-- ДЕЙСТВИЕ I -->
+        <section class="mb-16" id="task1-section">
+            <h3 class="text-2xl font-bold text-red-900 mb-6 flex items-center gap-4 uppercase">
+                <span class="bg-red-900 text-white rounded-full w-10 h-10 flex items-center justify-center text-sm">I</span>
+                Тренировка
+            </h3>
+            <div class="space-y-6 text-xl bg-white/40 p-6 rounded shadow-inner" id="task1">
+                <p>1. Чехов <input type="text" maxlength="1" class="comma-input" data-ans=""> как писатель вошёл в историю литературы.</p>
+                <p>2. Чехов <input type="text" maxlength="1" class="comma-input" data-ans=","> как талантливый драматург <input type="text" maxlength="1" class="comma-input" data-ans=","> изменил театр.</p>
+                <p>3. Толстой отзывался о нём <input type="text" maxlength="1" class="comma-input" data-ans=""> как о прекрасном человеке.</p>
+                <p>4. Чехов <input type="text" maxlength="1" class="comma-input" data-ans=""> как врач понимал человеческую боль.</p>
+                <p>5. Чехов <input type="text" maxlength="1" class="comma-input" data-ans=","> как истинный художник жизни <input type="text" maxlength="1" class="comma-input" data-ans=","> видел трагедии.</p>
+                <p>6. Его уважали <input type="text" maxlength="1" class="comma-input" data-ans=""> как великого мастера слова.</p>
+            </div>
+            <div class="mt-4 flex justify-center">
+                <button onclick="checkTask('task1')" class="btn-theatre">Проверить реплики I действия</button>
+            </div>
+        </section>
+
+        <!-- ТЕОРИЯ -->
+        <section class="theory-block shadow-lg">
+            <h4 class="text-xl font-bold text-red-900 mb-4 uppercase text-center">🎭 Театральный разъездъ: Правила союза «КАК»</h4>
+            <div class="grid md:grid-cols-2 gap-8 text-sm md:text-base italic">
+                <div class="space-y-4">
+                    <p class="bg-white p-3 border-l-4 border-red-900 shadow-sm">
+                        <strong class="text-red-900 uppercase block mb-1">Запятая НЕ ставится:</strong>
+                        Если союз равен значению <span class="font-bold">«в качестве»</span>. 
+                        <br><span class="text-gray-600 text-xs italic">Пример: Чехов как врач (=в качестве врача) понимал боль.</span>
+                    </p>
+                </div>
+                <div class="space-y-4">
+                    <p class="bg-white p-3 border-l-4 border-gold shadow-sm">
+                        <strong class="text-red-900 uppercase block mb-1">Запятая СТАВИТСЯ:</strong>
+                        Если оборот имеет значение <span class="font-bold">причины</span> (так как).
+                        <br><span class="text-gray-600 text-xs italic">Пример: Чехов, как талантливый врач, был внимателен.</span>
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ДЕЙСТВИЕ II -->
+        <section class="mb-16">
+            <h3 class="text-2xl font-bold text-red-900 mb-6 flex items-center gap-4 uppercase">
+                <span class="bg-red-900 text-white rounded-full w-10 h-10 flex items-center justify-center text-sm">II</span>
+                Мизансцены
+            </h3>
+            <div class="space-y-6 text-xl bg-white/40 p-6 rounded shadow-inner" id="task2">
+                <p>1. Чехов <input type="text" maxlength="1" class="comma-input" data-ans=","> как человек редкой душевной тонкости <input type="text" maxlength="1" class="comma-input" data-ans=","> всегда оставался скромным.</p>
+                <p>2. Чехов <input type="text" maxlength="1" class="comma-input" data-ans=","> как человек, глубоко переживающий боль <input type="text" maxlength="1" class="comma-input" data-ans=","> не мог быть равнодушным.</p>
+                <p>3. Он <input type="text" maxlength="1" class="comma-input" data-ans=""> как врач <input type="text" maxlength="1" class="comma-input" data-ans=","> а не <input type="text" maxlength="1" class="comma-input" data-ans=""> как писатель отправился на Сахалин.</p>
+            </div>
+            <div class="mt-4 flex justify-center">
+                <button onclick="checkTask('task2')" class="btn-theatre">Проверить мизансцены II действия</button>
+            </div>
+        </section>
+
+        <!-- ЛАБОРАТОРИЯ -->
+        <section class="mb-16">
+            <h3 class="text-2xl font-bold text-red-900 mb-6 text-center uppercase tracking-widest">🎨 Творческая Лабораторія</h3>
+            <div class="grid md:grid-cols-2 gap-8 border-y border-gold py-8 mb-8" id="matching-game">
+                <div class="space-y-2" id="functions">
+                    <div class="matching-item" data-id="1">Значение «в качестве»</div>
+                    <div class="matching-item" data-id="2">Значение сравнения</div>
+                    <div class="matching-item" data-id="3">Причинное значение</div>
+                </div>
+                <div class="space-y-2" id="examples">
+                    <div class="matching-item" data-match="2">«Сцена как трансформер меняется»</div>
+                    <div class="matching-item" data-match="1">«Мы пригласили его как эксперта»</div>
+                    <div class="matching-item" data-match="3">«Актер, как мастер, легко вошел в роль»</div>
+                </div>
+            </div>
+            <div class="text-center mb-10">
+                <button onclick="checkMatching()" id="check-match-btn" class="btn-theatre">Сверить маски</button>
+            </div>
+
+            <div class="mb-8">
+                <h4 class="text-xl font-bold text-red-900 mb-4 text-center uppercase">📝 ФИНАЛЬНЫЙ МОНОЛОГЪ</h4>
+                <textarea id="essay" class="w-full h-40 bg-white/60 border-2 border-gold p-4 text-xl cursive outline-none" placeholder="Чехов сегодня актуален тем, что..."></textarea>
+            </div>
+        </section>
+
+        <div class="text-center pb-12">
+            <button onclick="finishLesson()" id="finish-btn" class="btn-theatre text-2xl px-12 py-5 shadow-2xl">Завершить спектакль</button>
+        </div>
+
+        <footer class="mt-20 pt-8 border-t-2 border-gold flex justify-between items-center no-print">
+            <button onclick="openTeacherAuthModal()" class="text-xs text-gray-500 hover:text-red-900 transition underline italic">Вход для администрации</button>
+            <p class="text-xs italic opacity-50">Антон Павлович одобрил бы ваше старание.</p>
+        </footer>
+    </div>
+
+    <!-- ТАБЛИЦА УЧИТЕЛЯ (АРХИВ) -->
+    <div id="teacher-panel" class="fixed inset-0 z-[500] bg-white p-8 hidden overflow-y-auto">
+        <div class="max-w-6xl mx-auto">
+            <div class="flex justify-between items-center mb-8 border-b-2 border-gold pb-4">
+                <h2 class="text-4xl font-bold title-gold uppercase">Театральный Архивъ</h2>
+                <button onclick="closeTeacherPanel()" class="btn-theatre">Закрыть архив</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse bg-white shadow-lg">
+                    <thead class="bg-red-900 text-white uppercase text-xs">
+                        <tr>
+                            <th class="p-4 border">Время</th>
+                            <th class="p-4 border">Ученик</th>
+                            <th class="p-4 border">Класс</th>
+                            <th class="p-4 border text-center">Баллы</th>
+                            <th class="p-4 border">Эссе</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-table-body" class="text-sm"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="theatre-footer mt-[-50px] relative z-[-1]"></div>
+
+    <script type="module">
+        // Перенос функций в глобальную область, так как они вызываются из onclick
+        let userData = { ln: '', fn: '', gr: '' };
+        let matchingState = { selectedId: null, correctCount: 0 };
+
+        window.startLesson = function() {
+            const ln = document.getElementById('user-lastname').value.trim();
+            const fn = document.getElementById('user-firstname').value.trim();
+            const gr = document.getElementById('user-grade').value.trim();
+            if (!ln || !fn || !gr) return alert("Представьтесь, пожалуйста!");
+            
+            userData = { ln, fn, gr };
+            document.getElementById('display-name').innerText = `Зритель: ${ln} ${fn}`;
+            document.getElementById('display-grade').innerText = `Класс: ${gr}`;
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('main-content').classList.remove('hidden');
+            window.scrollTo(0,0);
+        };
+
+        window.checkTask = function(taskId) {
+            const container = document.getElementById(taskId);
+            const inputs = container.querySelectorAll('.comma-input');
+            let taskScore = 0;
+            inputs.forEach(input => {
+                const ans = input.getAttribute('data-ans');
+                const val = input.value.trim();
+                input.classList.remove('correct', 'incorrect');
+                if (val === ans) {
+                    input.classList.add('correct');
+                    taskScore++;
+                } else {
+                    input.classList.add('incorrect');
+                }
+            });
+            return taskScore;
+        };
+
+        // Matching Logic
+        document.querySelectorAll('.matching-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const parent = this.parentElement.id;
+                if (parent === 'functions') {
+                    document.querySelectorAll('#functions .matching-item').forEach(i => i.classList.remove('selected'));
+                    this.classList.add('selected');
+                    matchingState.selectedId = this.getAttribute('data-id');
+                } else if (parent === 'examples' && matchingState.selectedId) {
+                    if (this.getAttribute('data-match') === matchingState.selectedId) {
+                        this.style.backgroundColor = '#c5a059';
+                        this.style.color = '#fff';
+                        document.querySelector(`#functions [data-id="${matchingState.selectedId}"]`).style.opacity = '0.3';
+                        document.querySelector(`#functions [data-id="${matchingState.selectedId}"]`).style.pointerEvents = 'none';
+                        matchingState.correctCount++;
+                        matchingState.selectedId = null;
+                    } else {
+                        this.classList.add('shake');
+                        setTimeout(() => this.classList.remove('shake'), 500);
+                    }
+                }
+            });
+        });
+
+        window.checkMatching = function() {
+            if (matchingState.correctCount === 3) {
+                alert("Все маски сопоставлены верно!");
+            } else {
+                alert(`Верно сопоставлено: ${matchingState.correctCount} из 3. Продолжайте поиск.`);
+            }
+        };
+
+        window.finishLesson = async function() {
+            const score1 = window.checkTask('task1');
+            const score2 = window.checkTask('task2');
+            const totalScore = score1 + score2 + matchingState.correctCount;
+
+            const btn = document.getElementById('finish-btn');
+            btn.disabled = true;
+            btn.innerText = "Работа в архиве...";
+
+            const { setDoc, doc, serverTimestamp } = window.firestoreUtils;
+
+            const data = {
+                student: `${userData.ln} ${userData.fn}`,
+                grade: userData.gr,
+                score: totalScore,
+                essay: document.getElementById('essay').value,
+                timestamp: serverTimestamp(),
+                createdAt: new Date().toLocaleString('ru-RU')
+            };
+
+            try {
+                const resultDoc = doc(window.db, 'artifacts', window.appId, 'public', 'data', 'responses', `${Date.now()}_${userData.ln}`);
+                await setDoc(resultDoc, data);
+                showFinalFeedback(totalScore);
+            } catch (e) {
+                console.error(e);
+                btn.disabled = false;
+                btn.innerText = "Повторить попытку";
+                alert("Ошибка сохранения. Проверьте соединение.");
+            }
+        };
+
+        function showFinalFeedback(score) {
+            const m = document.createElement('div');
+            m.className = "fixed inset-0 flex items-center justify-center bg-black/95 z-[600] p-4";
+            m.innerHTML = `
+                <div class="paper-texture theatre-frame p-12 text-center max-w-lg shadow-2xl">
+                    <h2 class="text-5xl title-gold mb-6 uppercase">ЗАНАВЕС!</h2>
+                    <p class="text-2xl italic mb-8">Благодарим за участие в постановке.</p>
+                    <div class="text-7xl font-bold text-red-900 mb-8 border-y-2 border-gold py-4">${score} / 16</div>
+                    <button onclick="location.reload()" class="btn-theatre text-xl">Вернуться в кассу</button>
+                </div>
+            `;
+            document.body.appendChild(m);
+        }
+
+        window.openTeacherAuthModal = function() {
+            document.getElementById('teacher-auth-modal').classList.remove('hidden');
+            document.getElementById('teacher-password-input').focus();
+        };
+
+        window.closeTeacherAuth = function() {
+            document.getElementById('teacher-auth-modal').classList.add('hidden');
+            document.getElementById('teacher-password-input').value = '';
+        };
+
+        window.verifyTeacherPassword = function() {
+            const pass = document.getElementById('teacher-password-input').value;
+            if (pass === 'JA123') {
+                window.closeTeacherAuth();
+                window.openArchive();
+            } else {
+                alert("Неверный код доступа.");
+                document.getElementById('teacher-password-input').value = '';
+            }
+        };
+
+        window.openArchive = async function() {
+            document.getElementById('teacher-panel').classList.remove('hidden');
+            const tbody = document.getElementById('results-table-body');
+            tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center italic">Поиск по документам...</td></tr>';
+            
+            const { collection, getDocs, query } = window.firestoreUtils;
+
+            try {
+                const q = query(collection(window.db, 'artifacts', window.appId, 'public', 'data', 'responses'));
+                const snap = await getDocs(q);
+                let html = '';
+                snap.forEach(doc => {
+                    const d = doc.data();
+                    html += `
+                        <tr class="hover:bg-red-50 border-b">
+                            <td class="p-4 border">${d.createdAt || '—'}</td>
+                            <td class="p-4 border font-bold text-red-900">${d.student}</td>
+                            <td class="p-4 border">${d.grade}</td>
+                            <td class="p-4 border text-center font-bold text-lg">${d.score}</td>
+                            <td class="p-4 border text-xs italic bg-gray-50">${d.essay?.substring(0,150) || '...'}...</td>
+                        </tr>
+                    `;
+                });
+                tbody.innerHTML = html || '<tr><td colspan="5" class="p-8 text-center italic">Архив пуст</td></tr>';
+            } catch (e) { 
+                console.error(e);
+                tbody.innerHTML = '<tr><td colspan="5" class="text-red-900 p-8 text-center">Ошибка доступа к базе данных.</td></tr>'; 
+            }
+        };
+
+        window.closeTeacherPanel = function() { document.getElementById('teacher-panel').classList.add('hidden'); };
+    </script>
+</body>
+</html>
